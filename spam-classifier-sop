@@ -1,21 +1,18 @@
 # ============================================================
-#  SMS Spam / Ham Classifier — Google Colab Ready  ✅
+#  SMS Spam / Ham Classifier — Google Colab Ready
 #  Dataset: UCI SMS Spam Collection (Kaggle)
 #  Run each cell top-to-bottom. No extra setup needed.
 # ============================================================
 
-# ── CELL 1 : Install packages ────────────────────────────────
-# (In Colab, this installs automatically)
 import subprocess, sys
 
 pkgs = ["nltk", "scikit-learn", "pandas", "numpy", "joblib"]
 for pkg in pkgs:
     subprocess.run(
         [sys.executable, "-m", "pip", "install", "-q", pkg],
-        check=False   # won't crash even if already installed
+        check=False
     )
 
-# ── CELL 2 : Imports ─────────────────────────────────────────
 import pandas as pd
 import numpy as np
 import re
@@ -41,12 +38,9 @@ from nltk.stem import WordNetLemmatizer
 STOP_WORDS = set(stopwords.words("english"))
 lemmatizer = WordNetLemmatizer()
 
-print("✅ All libraries loaded successfully")
+print("All libraries loaded successfully")
 
-# ── CELL 3 : Load Dataset ─────────────────────────────────────
-# The script auto-downloads the dataset — no manual upload needed.
-# If you have spam.csv locally, place it in the same folder.
-
+# ---------- Load Dataset ----------
 CSV_URL = (
     "https://raw.githubusercontent.com/mohitgupta-1O1/"
     "Kaggle-SMS-Spam-Collection-Dataset-/master/spam.csv"
@@ -54,28 +48,27 @@ CSV_URL = (
 
 try:
     df = pd.read_csv("spam.csv", encoding="latin-1")
-    print("✅ Loaded local spam.csv")
+    print("Loaded local spam.csv")
 except FileNotFoundError:
-    print("Downloading dataset from GitHub mirror …")
+    print("Downloading dataset from GitHub mirror ...")
     df = pd.read_csv(CSV_URL, encoding="latin-1")
-    print("✅ Dataset downloaded successfully")
+    print("Dataset downloaded successfully")
 
-# Keep only label + message columns
 df = df.iloc[:, :2]
 df.columns = ["label", "message"]
 df.dropna(inplace=True)
 df.drop_duplicates(inplace=True)
 
-print(f"\n📊 Total messages  : {len(df)}")
-print(f"   Ham messages    : {(df['label']=='ham').sum()}")
-print(f"   Spam messages   : {(df['label']=='spam').sum()}")
-print(f"   Spam percentage : {(df['label']=='spam').mean()*100:.1f}%")
+print(f"\nTotal messages  : {len(df)}")
+print(f"Ham messages    : {(df['label']=='ham').sum()}")
+print(f"Spam messages   : {(df['label']=='spam').sum()}")
+print(f"Spam percentage : {(df['label']=='spam').mean()*100:.1f}%")
 
-# ── CELL 4 : Text Preprocessing ──────────────────────────────
+# ---------- Text Preprocessing ----------
 def clean_text(text):
     text = str(text).lower()
-    text = re.sub(r"http\S+|www\S+", " ", text)   # remove URLs
-    text = re.sub(r"[^a-z\s]", " ", text)          # letters only
+    text = re.sub(r"http\S+|www\S+", " ", text)
+    text = re.sub(r"[^a-z\s]", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
     tokens = text.split()
     tokens = [
@@ -87,15 +80,15 @@ def clean_text(text):
 
 df["clean"] = df["message"].apply(clean_text)
 
-print("\n📝 Sample preprocessing results:")
+print("\nSample preprocessing results:")
 print("-" * 60)
 for i in [0, 2, 4]:
     print(f"Original : {df['message'].iloc[i][:80]}")
     print(f"Cleaned  : {df['clean'].iloc[i][:80]}")
     print()
 
-# ── CELL 5 : Encode & Split ───────────────────────────────────
-df["label_num"] = (df["label"] == "spam").astype(int)  # ham=0, spam=1
+# ---------- Encode and Split ----------
+df["label_num"] = (df["label"] == "spam").astype(int)
 
 X_train, X_test, y_train, y_test = train_test_split(
     df["clean"], df["label_num"],
@@ -104,26 +97,26 @@ X_train, X_test, y_train, y_test = train_test_split(
     random_state=42
 )
 
-print(f"✅ Train : {len(X_train)} messages")
-print(f"   Test  : {len(X_test)} messages")
+print(f"Train : {len(X_train)} messages")
+print(f"Test  : {len(X_test)} messages")
 
-# ── CELL 6 : TF-IDF Vectorization ────────────────────────────
+# ---------- TF-IDF Vectorization ----------
 tfidf = TfidfVectorizer(max_features=5000, ngram_range=(1, 2))
 X_train_vec = tfidf.fit_transform(X_train)
 X_test_vec  = tfidf.transform(X_test)
 
-print(f"✅ TF-IDF done — feature matrix shape: {X_train_vec.shape}")
+print(f"TF-IDF done — feature matrix shape: {X_train_vec.shape}")
 
-# ── CELL 7 : Train & Evaluate All Models ─────────────────────
+# ---------- Train and Evaluate Models ----------
 models = {
     "Naive Bayes"         : MultinomialNB(),
     "Logistic Regression" : LogisticRegression(max_iter=1000, class_weight="balanced", random_state=42),
     "SVM (LinearSVC)"     : LinearSVC(class_weight="balanced", random_state=42),
 }
 
-results   = {}
-best_f1   = 0
-best_name = ""
+results    = {}
+best_f1    = 0
+best_name  = ""
 best_model = None
 
 print("\n" + "=" * 60)
@@ -138,7 +131,7 @@ for name, model in models.items():
     f1  = f1_score(y_test, preds, average="weighted")
     results[name] = {"Accuracy": f"{acc*100:.2f}%", "F1 Score": f"{f1*100:.2f}%"}
 
-    print(f"\n🔹 {name}")
+    print(f"\n{name}")
     print(f"   Accuracy : {acc*100:.2f}%  |  F1 Score : {f1*100:.2f}%")
     print(classification_report(y_test, preds, target_names=["Ham", "Spam"]))
 
@@ -153,36 +146,35 @@ for name, model in models.items():
         best_name  = name
         best_model = model
 
-# ── CELL 8 : Summary ─────────────────────────────────────────
+# ---------- Summary ----------
 print("\n" + "=" * 60)
 print("                    SUMMARY TABLE")
 print("=" * 60)
 summary_df = pd.DataFrame(results).T
 print(summary_df.to_string())
-print(f"\n🏆 Best Model : {best_name}  (F1 = {best_f1*100:.2f}%)")
+print(f"\nBest Model : {best_name}  (F1 = {best_f1*100:.2f}%)")
 
-# ── CELL 9 : Save Model ───────────────────────────────────────
+# ---------- Save Model ----------
 joblib.dump(best_model, "spam_model.pkl")
 joblib.dump(tfidf,      "tfidf_vectorizer.pkl")
-print("\n✅ Model saved → spam_model.pkl")
-print("✅ Vectorizer saved → tfidf_vectorizer.pkl")
+print("\nModel saved     -> spam_model.pkl")
+print("Vectorizer saved -> tfidf_vectorizer.pkl")
 
-# ── CELL 10 : Predict New Messages ───────────────────────────
+# ---------- Predict New Messages ----------
 def predict_message(text):
-    """Pass any SMS text → returns SPAM or HAM"""
     cleaned = clean_text(text)
     vec     = tfidf.transform([cleaned])
     pred    = best_model.predict(vec)[0]
-    return "🚨 SPAM" if pred == 1 else "✅ HAM"
+    return "SPAM" if pred == 1 else "HAM"
 
 test_messages = [
-    "WINNER!! Claim your £1000 cash prize now. Call 09061743810",
+    "WINNER!! Claim your 1000 cash prize now. Call 09061743810",
     "Hey, are you coming to the party tonight?",
     "FREE entry in 2 a weekly competition to win FA Cup final tkts!",
     "Can you pick up some milk on your way home?",
     "Congratulations! You have been selected for a free iPhone. Click here",
     "Lunch tomorrow? Let me know what time works for you.",
-    "Your mobile number has WON £2000 prize GUARANTEED. Call now.",
+    "Your mobile number has WON 2000 prize GUARANTEED. Call now.",
     "I will be late, traffic is bad. See you in 20 mins.",
     "URGENT! Your account will be suspended. Verify now at link.com",
     "Thanks for the help yesterday, really appreciated it!",
@@ -193,6 +185,6 @@ print("              LIVE PREDICTIONS")
 print("=" * 60)
 for msg in test_messages:
     label = predict_message(msg)
-    print(f"  {label}  →  {msg[:65]}")
+    print(f"  [{label:4}]  {msg[:65]}")
 
-print("\n✅ All done! Your spam classifier is ready.")
+print("\nAll done. Your spam classifier is ready.")
